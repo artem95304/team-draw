@@ -69,11 +69,54 @@ def test_draw_teams():
     assert client.get("/participants").json() == original
 
 
+def test_draw_pairs_even():
+    client.post(
+        "/participants",
+        params={"text": "Аня Боря Вика Глеб", "split_by_spaces": True},
+    )
+    original = client.get("/participants").json()
+    response = client.post("/draw/pairs")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [len(pair) for pair in data["pairs"]] == [2, 2]
+    assert data["unpaired"] is None
+
+    result = data["pairs"][0] + data["pairs"][1]
+    expected_ids = sorted(person["id"] for person in original)
+    actual_ids = sorted(person["id"] for person in result)
+    assert actual_ids == expected_ids
+    assert client.get("/participants").json() == original
+
+
+def test_draw_pairs_odd():
+    client.post(
+        "/participants",
+        params={"text": "Аня Боря Вика Глеб Даша", "split_by_spaces": True},
+    )
+    original = client.get("/participants").json()
+    response = client.post("/draw/pairs")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert [len(pair) for pair in data["pairs"]] == [2, 2]
+    assert data["unpaired"] is not None
+
+    result = data["pairs"][0] + data["pairs"][1] + [data["unpaired"]]
+    expected_ids = sorted(person["id"] for person in original)
+    actual_ids = sorted(person["id"] for person in result)
+    assert actual_ids == expected_ids
+    assert client.get("/participants").json() == original
+
+
 def test_invalid_input():
     response = client.post("/participants", params={"text": ""})
     assert response.status_code == 400
 
     response = client.post("/draw/teams", params={"team_count": 2})
+    assert response.status_code == 400
+
+    response = client.post("/draw/pairs")
     assert response.status_code == 400
 
     client.post(
