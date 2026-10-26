@@ -25,6 +25,21 @@ def make_teams(people, team_count):
     return teams
 
 
+def make_pairs(people):
+    shuffled = people.copy()
+    random.shuffle(shuffled)
+
+    unpaired = None
+    if len(shuffled) % 2:
+        unpaired = shuffled.pop()
+
+    pairs = []
+    for index in range(0, len(shuffled), 2):
+        pairs.append(shuffled[index:index + 2])
+
+    return pairs, unpaired
+
+
 @app.get("/health")
 def health():
     logger.info("Health check")
@@ -94,3 +109,15 @@ def draw_teams(team_count: int):
     teams = make_teams(participants, team_count)
     logger.info("Created teams: %s", team_count)
     return {"teams": teams}
+
+
+@app.post("/draw/pairs")
+def draw_pairs():
+    if not participants:
+        raise HTTPException(
+            status_code=400, detail="Сначала добавьте участников"
+        )
+
+    pairs, unpaired = make_pairs(participants)
+    logger.info("Created pairs: %s", len(pairs))
+    return {"pairs": pairs, "unpaired": unpaired}
